@@ -1,0 +1,98 @@
+# Byte-compiled / optimized / DLL files
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+
+venv/
+env/
+ENV/
+.venv/
+
+# Environment variables
+
+.env
+.env.*
+
+# Secrets & credentials
+
+credentials.json
+token.json
+*.pem
+*.key
+
+# Python packaging
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+
+# Jupyter Notebook
+
+.ipynb_checkpoints
+
+# IDE / Editor files
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# Database files (local)
+
+*.sqlite3
+*.db
+
+# FastAPI / Uvicorn
+
+*.pid
+
+# Node (if frontend exists)
+
+node_modules/
+dist/
+
+# Misc
+
+*.bak
+*.tmp
+
+
+# Google credentials
+credentials.json
+cloudmail_credentials.json
+
+# Tokens
+calendar_token.json
+token.json
+
+# Backend-specific secrets
+backend/credentials.json
+backend/calendar_token.json

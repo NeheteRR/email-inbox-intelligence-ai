@@ -1,0 +1,24 @@
+# ─── Web Framework ────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# ─── Google Gmail API ─────────────────────────────────────────────────────────
+google-api-python-client>=2.127.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# ─── CrewAI Agentic Framework ─────────────────────────────────────────────────
+crewai>=1.12.0
+
+# ─── Gemini API (Generative AI) ───────────────────────────────────────────────
+google-generativeai>=0.8.3
+
+# ─── Environment Variable Loading ─────────────────────────────────────────────
+python-dotenv>=1.0.1
+
+# ─── Typing & Utilities ────────────────────────────────────────────────────────
+pydantic>=2.7.1
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
