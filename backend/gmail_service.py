@@ -18,6 +18,7 @@ SCOPES:
 """
 
 import base64
+import json
 import logging
 import os
 from email.mime.text import MIMEText
@@ -61,51 +62,78 @@ class GmailService:
         """
         Authenticate with Gmail using OAuth 2.0.
 
-        - Loads existing token from token.json if available.
-        - Refreshes token automatically when expired.
-        - Initiates browser-based OAuth flow on first run or scope change.
+        Priority:
+          1. GMAIL_TOKEN_JSON env var  → production / Cloud Run / Render
+          2. token.json file           → local development only
+
+        Browser-based OAuth (run_local_server) is intentionally DISABLED.
+        Pre-generate token.json locally and set GMAIL_TOKEN_JSON in production.
 
         Returns:
             Google API service object for Gmail.
 
         Raises:
-            FileNotFoundError: If credentials.json is missing.
-            Exception: On authentication failure.
+            RuntimeError: If no valid token is available.
         """
         creds = None
 
-        if not os.path.exists(settings.GMAIL_CREDENTIALS_PATH):
-            raise FileNotFoundError(
-                f"credentials.json not found at '{settings.GMAIL_CREDENTIALS_PATH}'. "
-                "Download it from Google Cloud Console > APIs & Services > Credentials."
+        # ── 1. ENV-VAR based loading — Production (Cloud Run / Render / Docker) ──
+        gmail_token_json = os.getenv("GMAIL_TOKEN_JSON")
+
+        if gmail_token_json:
+            try:
+                token_data = json.loads(gmail_token_json)
+                creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+                logger.info("[Auth] Using Gmail token from GMAIL_TOKEN_JSON environment variable.")
+            except Exception as e:
+                logger.error(f"[Auth] Failed to parse GMAIL_TOKEN_JSON: {e}")
+                raise RuntimeError(f"Invalid GMAIL_TOKEN_JSON env var: {e}") from e
+
+        # ── 2. FILE-BASED fallback — Local development only ───────────────────────
+        if not creds:
+            if os.path.exists(settings.GMAIL_TOKEN_PATH):
+                try:
+                    creds = Credentials.from_authorized_user_file(
+                        settings.GMAIL_TOKEN_PATH, SCOPES
+                    )
+                    logger.info("[Auth] Using Gmail token from token.json file (local dev).")
+                except Exception as e:
+                    logger.warning(f"[Auth] Could not load token.json: {e}.")
+
+        # ── 3. No token available — raise immediately, do NOT open browser ────────
+        if not creds:
+            raise RuntimeError(
+                "No Gmail credentials available. "
+                "Set GMAIL_TOKEN_JSON env var in production, "
+                "or ensure token.json exists for local development. "
+                "Browser-based OAuth is disabled in this deployment."
             )
 
-        # Load saved token
-        if os.path.exists(settings.GMAIL_TOKEN_PATH):
-            try:
-                creds = Credentials.from_authorized_user_file(
-                    settings.GMAIL_TOKEN_PATH, SCOPES
-                )
-                logger.info("Loaded existing Gmail token.")
-            except Exception as e:
-                logger.warning(f"Could not load token.json: {e}. Re-authenticating.")
-
-        # Refresh or re-authenticate
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                logger.info("Refreshing expired Gmail token...")
+        # ── 4. Refresh if expired ─────────────────────────────────────────────────
+        if not creds.valid:
+            if creds.expired and creds.refresh_token:
+                logger.info("[Auth] Refreshing expired Gmail token...")
                 creds.refresh(Request())
-            else:
-                logger.info("Starting Gmail OAuth flow (browser will open)...")
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    settings.GMAIL_CREDENTIALS_PATH, SCOPES
-                )
-                creds = flow.run_local_server(port=0)
+                logger.info("[Auth] Gmail token refreshed successfully.")
 
-            # Persist the new / refreshed token
-            with open(settings.GMAIL_TOKEN_PATH, "w") as token_file:
-                token_file.write(creds.to_json())
-            logger.info(f"Token saved to '{settings.GMAIL_TOKEN_PATH}'.")
+                # Persist refreshed token to file in local dev only (env var always wins)
+                if not gmail_token_json:
+                    try:
+                        with open(settings.GMAIL_TOKEN_PATH, "w") as token_file:
+                            token_file.write(creds.to_json())
+                        logger.info(f"[Auth] Refreshed token saved to '{settings.GMAIL_TOKEN_PATH}'.")
+                    except OSError as e:
+                        logger.warning(f"[Auth] Could not persist refreshed token (read-only FS?): {e}")
+            else:
+                # Token exists but is invalid and cannot be refreshed
+                raise RuntimeError(
+                    "Gmail token is invalid and cannot be refreshed. "
+                    "Re-generate token.json locally and update GMAIL_TOKEN_JSON env var."
+                )
+
+        # ── OAuth browser flow is intentionally removed for production safety ──────
+        # flow = InstalledAppFlow.from_client_secrets_file(settings.GMAIL_CREDENTIALS_PATH, SCOPES)
+        # creds = flow.run_local_server(port=0)
 
         return build("gmail", "v1", credentials=creds)
 

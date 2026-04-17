@@ -50,48 +50,77 @@ class CalendarService:
         """
         Authenticate with Google Calendar using OAuth 2.0.
 
-        Uses a SEPARATE token file (calendar_token.json) from Gmail to avoid
-        scope-change invalidation issues.
+        Priority:
+          1. CALENDAR_TOKEN_JSON env var  → production / Cloud Run / Render
+          2. calendar_token.json file     → local development only
+
+        Browser-based OAuth (run_local_server) is intentionally DISABLED.
+        Pre-generate calendar_token.json locally and set CALENDAR_TOKEN_JSON in production.
 
         Returns:
             Google API service object for Calendar v3.
 
         Raises:
-            FileNotFoundError: If credentials.json is missing.
+            RuntimeError: If no valid token is available.
         """
         creds = None
 
-        if not os.path.exists(settings.GMAIL_CREDENTIALS_PATH):
-            raise FileNotFoundError(
-                f"credentials.json not found at '{settings.GMAIL_CREDENTIALS_PATH}'. "
-                "Download it from Google Cloud Console > APIs & Services > Credentials."
+        # ── 1. ENV-VAR based loading — Production (Cloud Run / Render / Docker) ──
+        calendar_token_json = os.getenv("CALENDAR_TOKEN_JSON")
+
+        if calendar_token_json:
+            try:
+                token_data = json.loads(calendar_token_json)
+                creds = Credentials.from_authorized_user_info(token_data, CALENDAR_SCOPES)
+                logger.info("[Auth] Using Calendar token from CALENDAR_TOKEN_JSON environment variable.")
+            except Exception as e:
+                logger.error(f"[Auth] Failed to parse CALENDAR_TOKEN_JSON: {e}")
+                raise RuntimeError(f"Invalid CALENDAR_TOKEN_JSON env var: {e}") from e
+
+        # ── 2. FILE-BASED fallback — Local development only ───────────────────────
+        if not creds:
+            if os.path.exists(settings.CALENDAR_TOKEN_PATH):
+                try:
+                    creds = Credentials.from_authorized_user_file(
+                        settings.CALENDAR_TOKEN_PATH, CALENDAR_SCOPES
+                    )
+                    logger.info("[Auth] Using Calendar token from calendar_token.json file (local dev).")
+                except Exception as e:
+                    logger.warning(f"[Auth] Could not load calendar_token.json: {e}.")
+
+        # ── 3. No token available — raise immediately, do NOT open browser ────────
+        if not creds:
+            raise RuntimeError(
+                "No Calendar credentials available. "
+                "Set CALENDAR_TOKEN_JSON env var in production, "
+                "or ensure calendar_token.json exists for local development. "
+                "Browser-based OAuth is disabled in this deployment."
             )
 
-        if os.path.exists(settings.CALENDAR_TOKEN_PATH):
-            try:
-                creds = Credentials.from_authorized_user_file(
-                    settings.CALENDAR_TOKEN_PATH, CALENDAR_SCOPES
-                )
-                logger.info("Loaded existing Calendar token.")
-            except Exception as e:
-                logger.warning(
-                    f"Could not load calendar_token.json: {e}. Re-authenticating."
-                )
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                logger.info("Refreshing expired Calendar token...")
+        # ── 4. Refresh if expired ─────────────────────────────────────────────────
+        if not creds.valid:
+            if creds.expired and creds.refresh_token:
+                logger.info("[Auth] Refreshing expired Calendar token...")
                 creds.refresh(Request())
-            else:
-                logger.info("Starting Calendar OAuth flow (browser will open)...")
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    settings.GMAIL_CREDENTIALS_PATH, CALENDAR_SCOPES
-                )
-                creds = flow.run_local_server(port=0)
+                logger.info("[Auth] Calendar token refreshed successfully.")
 
-            with open(settings.CALENDAR_TOKEN_PATH, "w") as f:
-                f.write(creds.to_json())
-            logger.info(f"Calendar token saved to '{settings.CALENDAR_TOKEN_PATH}'.")
+                # Persist refreshed token to file in local dev only
+                if not calendar_token_json:
+                    try:
+                        with open(settings.CALENDAR_TOKEN_PATH, "w") as f:
+                            f.write(creds.to_json())
+                        logger.info(f"[Auth] Refreshed calendar token saved to '{settings.CALENDAR_TOKEN_PATH}'.")
+                    except OSError as e:
+                        logger.warning(f"[Auth] Could not persist refreshed calendar token (read-only FS?): {e}")
+            else:
+                raise RuntimeError(
+                    "Calendar token is invalid and cannot be refreshed. "
+                    "Re-generate calendar_token.json locally and update CALENDAR_TOKEN_JSON env var."
+                )
+
+        # ── OAuth browser flow is intentionally removed for production safety ──────
+        # flow = InstalledAppFlow.from_client_secrets_file(settings.GMAIL_CREDENTIALS_PATH, CALENDAR_SCOPES)
+        # creds = flow.run_local_server(port=0)
 
         return build("calendar", "v3", credentials=creds)
 
