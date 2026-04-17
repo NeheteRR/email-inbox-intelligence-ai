@@ -13,6 +13,8 @@ Exposes endpoints to:
   - Generate AI reply suggestions                  (POST /generate-reply)
 """
 
+import os
+os.environ["OPENAI_API_KEY"] = "dummy"
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
