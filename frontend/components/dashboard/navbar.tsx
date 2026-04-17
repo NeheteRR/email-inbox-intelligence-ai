@@ -10,14 +10,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Bell, Moon, Sun, User, LogOut, Settings } from "lucide-react"
-import { useState } from "react"
+import { useTheme } from "next-themes"
+import { useState, useEffect } from "react"
 
 export function Navbar() {
-  const [isDark, setIsDark] = useState(true)
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   return (
@@ -44,7 +49,11 @@ export function Navbar() {
           onClick={toggleTheme}
           className="text-muted-foreground hover:text-foreground"
         >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {mounted ? (
+            theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+          ) : (
+            <div className="h-4 w-4" />
+          )}
           <span className="sr-only">Toggle theme</span>
         </Button>
 

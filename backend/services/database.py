@@ -57,6 +57,16 @@ def init_db() -> None:
     """
     try:
         Base.metadata.create_all(bind=engine)
+        
+        # Ensure received_at column exists for older DBs
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS received_at TEXT;"))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not ensure received_at column: {e}")
+                
         logger.info("PostgreSQL tables verified/created successfully.")
     except SQLAlchemyError as e:
         logger.error(f"Database initialization failed: {e}")
@@ -90,6 +100,7 @@ def insert_email(db: Session, email_data: dict[str, Any]) -> int:
         category         = email_data.get("category", "References"),
         priority         = email_data.get("priority", "Low"),
         action           = email_data.get("action",   "Review"),
+        received_at      = email_data.get("received_at", ""),
     )
     try:
         db.add(record)
@@ -144,6 +155,7 @@ def get_emails(
                 "category":         email.category,
                 "priority":         email.priority,
                 "action":           email.action,
+                "received_at":      email.received_at,
             }
             for email in emails
         ]

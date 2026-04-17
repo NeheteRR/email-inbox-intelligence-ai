@@ -36,3 +36,4 @@ class Email(Base):
     category         = Column(Text, nullable=True)
     priority         = Column(Text, nullable=True)
     action           = Column(Text, nullable=True)
+    received_at      = Column(Text, nullable=True)

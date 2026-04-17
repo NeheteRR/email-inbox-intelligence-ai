@@ -182,6 +182,7 @@ class GmailService:
         sender    = headers.get("from", "Unknown Sender")
         subject   = headers.get("subject", "(No Subject)")
         thread_id = msg.get("threadId", "")       # Required for threaded replies
+        date      = headers.get("date", "")
         body      = self._extract_body(msg)
 
         return {
@@ -189,6 +190,7 @@ class GmailService:
             "thread_id": thread_id,
             "sender":    sender,
             "subject":   subject,
+            "date":      date,
             "body":      body or msg.get("snippet", ""),
         }
 

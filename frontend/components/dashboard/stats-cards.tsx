@@ -45,37 +45,48 @@ function StatCard({ title, value, change, changeType = "neutral", icon, iconColo
   )
 }
 
-export function StatsCards() {
+export interface DashboardStats {
+  total_emails: number
+  high_priority: number
+  meetings_detected: number
+  unread_emails: number
+}
+
+interface StatsCardsProps {
+  statsData: DashboardStats | null
+}
+
+export function StatsCards({ statsData }: StatsCardsProps) {
   const stats = [
     {
       title: "Total Emails",
-      value: "1,284",
-      change: "+12% from last week",
-      changeType: "increase" as const,
+      value: statsData?.total_emails || 0,
+      change: "Processed today",
+      changeType: "neutral" as const,
       icon: <Mail className="h-5 w-5 text-primary" />,
       iconColor: "bg-primary/10",
     },
     {
       title: "High Priority",
-      value: "23",
-      change: "3 require action",
+      value: statsData?.high_priority || 0,
+      change: "Require action",
       changeType: "neutral" as const,
       icon: <AlertTriangle className="h-5 w-5 text-status-danger" />,
       iconColor: "bg-status-danger/10",
     },
     {
       title: "Meetings Detected",
-      value: "8",
-      change: "2 upcoming today",
+      value: statsData?.meetings_detected || 0,
+      change: "Upcoming today",
       changeType: "neutral" as const,
       icon: <Calendar className="h-5 w-5 text-status-info" />,
       iconColor: "bg-status-info/10",
     },
     {
       title: "Unread Emails",
-      value: "47",
-      change: "-8% from yesterday",
-      changeType: "decrease" as const,
+      value: statsData?.unread_emails || 0,
+      change: "Needs reply",
+      changeType: "neutral" as const,
       icon: <MailOpen className="h-5 w-5 text-status-success" />,
       iconColor: "bg-status-success/10",
     },

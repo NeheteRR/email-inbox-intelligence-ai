@@ -1,0 +1,49 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment secrets — NEVER bake into image
+.env
+.env.*
+!.env.example
+
+# OAuth tokens — mount as secrets in Cloud Run
+token.json
+calendar_token.json
+
+# Development tools
+*.log
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node (if frontend is in a sibling directory and Docker build context is root)
+node_modules/
+frontend/
+
+# Git
+.git/
+.gitignore
+
+# Docs
+README.md
+*.md

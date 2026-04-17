@@ -304,6 +304,7 @@ def process_emails(db: Session = Depends(get_db)):
             # Carry Gmail IDs into the structured result for DB storage
             structured.setdefault("id",        raw_email.get("id"))
             structured.setdefault("thread_id", raw_email.get("thread_id"))
+            structured.setdefault("received_at", raw_email.get("date"))
             insert_email(db, structured)
             processed_count += 1
         except Exception as e:
@@ -350,6 +351,57 @@ def list_emails(db: Session = Depends(get_db)):
         "total": len(emails),
         "emails": emails,
     }
+
+
+@app.get(
+    "/dashboard-stats",
+    summary="Retrieve Dashboard Statistics and AI Insights",
+    tags=["Dashboard"],
+)
+def get_dashboard_stats(db: Session = Depends(get_db)):
+    """
+    Computes summary metrics for the dashboard from the database.
+    """
+    from services.models import Email
+    try:
+        total_emails = db.query(Email).count()
+        high_priority = db.query(Email).filter(Email.priority.ilike("High")).count()
+        meetings = db.query(Email).filter(Email.category.ilike("Meetings")).count()
+        # Mocking unread emails count using "Needs Reply" action label
+        unread_emails = db.query(Email).filter(Email.action.ilike("Needs Reply")).count()
+
+        insights = []
+        if high_priority > 0:
+            insights.append({
+                "type": "urgent",
+                "title": f"{high_priority} urgent emails",
+                "description": "Require your attention today"
+            })
+        if meetings > 0:
+            insights.append({
+                "type": "info",
+                "title": f"{meetings} meeting invites",
+                "description": "Pending your response"
+            })
+        
+        insights.append({
+            "type": "trend",
+            "title": "Data logging active",
+            "description": "System is processing new emails"
+        })
+
+        return {
+            "stats": {
+                "total_emails": total_emails,
+                "high_priority": high_priority,
+                "meetings_detected": meetings,
+                "unread_emails": unread_emails
+            },
+            "insights": insights
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate dashboard stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 # ─── Action Endpoints ──────────────────────────────────────────────────────────
