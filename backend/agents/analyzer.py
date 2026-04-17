@@ -12,7 +12,7 @@ import logging
 import re
 from typing import Any
 
-from crewai import Agent, Task, LLM
+from crewai import Agent, Task
 from config import settings
 
 from services.gemini_service import generate_response
@@ -99,10 +99,6 @@ class AnalyzerAgent:
     def __init__(self):
         self.agent = Agent(
             role="Email Analyzer",
-            llm=LLM(
-                model="gemini/gemini-2.5-flash",
-                api_key=settings.GEMINI_API_KEY,
-            ),
             goal=(
                 "Analyze email content to generate a concise summary, "
                 "classify its intent-based category, and assign a priority level."
