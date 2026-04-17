@@ -29,10 +29,6 @@ class EmailReaderAgent:
     def __init__(self):
         self.agent = Agent(
             role="Email Reader",
-            llm=LLM(
-                model="gemini/gemini-2.5-flash",
-                api_key=settings.GEMINI_API_KEY,
-            ),
             goal=(
                 "Parse and clean raw email content, removing noise such as "
                 "HTML tags and excessive whitespace, producing readable plain text."
@@ -44,6 +40,23 @@ class EmailReaderAgent:
             verbose=True,
             allow_delegation=False,
         )
+        # self.agent = Agent(
+        #     role="Email Reader",
+        #     llm=LLM(
+        #         model="gemini/gemini-2.5-flash",
+        #         api_key=settings.GEMINI_API_KEY,
+        #     ),
+        #     goal=(
+        #         "Parse and clean raw email content, removing noise such as "
+        #         "HTML tags and excessive whitespace, producing readable plain text."
+        #     ),
+        #     backstory=(
+        #         "You are a precision data-cleaning specialist. You preprocess "
+        #         "raw email payloads to make them ready for analysis by downstream AI agents."
+        #     ),
+        #     verbose=True,
+        #     allow_delegation=False,
+        # )
 
     def create_task(self, raw_email: dict[str, Any]) -> Task:
         """
